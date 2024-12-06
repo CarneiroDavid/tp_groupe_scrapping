@@ -1,0 +1,23 @@
+cd C:\kafka\bin\windows\
+
+pw1 :
+# start zookeeper
+.\zookeeper-server-start.bat ..\..\config\zookeeper.properties
+
+
+pw2 :
+# start kafka
+.\kafka-server-start.bat ..\..\config\server.properties
+
+term1 :
+# start topic
+.\kafka-topics.bat --create --topic imdb-reviews --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
+
+test :
+.\kafka-topics.bat --list --bootstrap-server localhost:9092
+
+
+1: Lancer le consumer : python kafka_consumer.py
+2: Lancer le spider : scrapy crawl imdb -a film_name="<FILM>"
+3: ???
+4: Profit !
