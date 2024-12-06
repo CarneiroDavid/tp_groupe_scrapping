@@ -7,6 +7,8 @@ import pandas as pd
 import time
 import csv
 
+
+# TEMPS D'EXECUTION: 8min22s
 class ImdbSpider(scrapy.Spider):
     name = "imdb"
     allowed_domains = ["imdb.com"]
@@ -69,7 +71,8 @@ class ImdbSpider(scrapy.Spider):
         try:
             # Accordion 'Type'
             accordion = self.driver.find_element(By.ID, "titleTypeAccordion")
-            accordion.click()
+            actions = ActionChains(self.driver)
+            actions.move_to_element(accordion).click().perform()
             time.sleep(1)
             btn = self.driver.find_element(By.CSS_SELECTOR, "button[data-testid='test-chip-id-movie']")
             btn.click()
@@ -77,7 +80,8 @@ class ImdbSpider(scrapy.Spider):
 
             # Accordion 'Ratings'
             accordion = self.driver.find_element(By.ID, "ratingsAccordion")
-            accordion.click()
+            actions = ActionChains(self.driver)
+            actions.move_to_element(accordion).click().perform()
             time.sleep(1)
             rating_min = self.driver.find_element(By.CSS_SELECTOR, "input[name='imdb-ratings-max-input']")
             rating_min.send_keys("7")
@@ -87,13 +91,14 @@ class ImdbSpider(scrapy.Spider):
 
             # Accordion 'Numbre of Votes'
             accordion = self.driver.find_element(By.ID, "numOfVotesAccordion")
-            accordion.click()
+            actions = ActionChains(self.driver)
+            actions.move_to_element(accordion).click().perform()
             time.sleep(1)
             votes_min = self.driver.find_element(By.CSS_SELECTOR, "input[name='numofvotes-max-input']")
             votes_min.send_keys("1000")
             votes_max = self.driver.find_element(By.CSS_SELECTOR, "input[name='numofvotes-min-input']")
-            votes_max.send_keys("1000000")
-            time.sleep(1)
+            votes_max.send_keys("100000000")
+            time.sleep(4)
 
         except Exception as e:
             self.log(f"Erreur lors de l'application des filtres : {e}")
@@ -103,28 +108,27 @@ class ImdbSpider(scrapy.Spider):
             # Application des filtres pour la recherche
             submit_button = self.driver.find_element(By.CSS_SELECTOR, "button[data-testid='adv-search-get-results']")
             submit_button.click()
-            time.sleep(3)
+            time.sleep(4)
 
             # Ordonner par nombre de reviews
             sort_select = self.driver.find_element(By.ID, "adv-srch-sort-by")
             sort_select.click()
-            time.sleep(3)
+            time.sleep(2)
             sort_option = self.driver.find_element(By.CSS_SELECTOR, "option[value='USER_RATING_COUNT']")
             sort_option.click()
-            self.log("Tri par nombre d'évaluations sélectionné.")
-            time.sleep(3)
+            time.sleep(4)
 
             # Ordre décroissant
             sort_order_button = self.driver.find_element(By.ID, "adv-srch-sort-order")
             sort_order_button.click()
-            self.log("Tri par ordre croissant activé.")
-            time.sleep(5)
+            time.sleep(6)
 
             # Charge 50 films supplémentaires
-            # load_more_button = self.driver.find_element(By.CSS_SELECTOR, "button.ipc-see-more__button")
-            # load_more_button.click()
-            # self.log("50 films supplémentaires chargés.")
-            # time.sleep(3)
+            load_button = self.driver.find_element(By.CSS_SELECTOR, "button.ipc-see-more__button")
+            # Scroll en bas de la page
+            actions = ActionChains(self.driver)
+            actions.move_to_element(load_button).click().perform()
+            time.sleep(6)
 
             self.extract_movie_links()
         except Exception as e:
@@ -138,13 +142,13 @@ class ImdbSpider(scrapy.Spider):
 
             self.movie_links = results_response.css(
                 "li.ipc-metadata-list-summary-item a.ipc-lockup-overlay::attr(href)"
-            ).getall()[:25]
+            ).getall()[:100]
             self.movie_links = [f"https://www.imdb.com{link}" for link in self.movie_links]
 
             self.log("Liens des films extraits.")
             for link in self.movie_links:
                 self.driver.get(link)
-                time.sleep(2)
+                time.sleep(1)
                 self.extract_movie_details(link)
         except Exception as e:
             self.log(f"Erreur lors de l'extraction des liens : {e}")
@@ -177,7 +181,6 @@ class ImdbSpider(scrapy.Spider):
         self.save_to_csv()
 
     def save_to_csv(self):
-        # Créer un DataFrame Pandas à partir des données
         df = pd.DataFrame(self.movie_data)
         df.to_csv("movies.csv", index=False, encoding="utf-8")
         self.log("Données sauvegardées dans movies.csv.")
